@@ -2,6 +2,8 @@ package server.DataBaseConnector; /**
  * Created by foban on 16.07.14.
  */
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.sql.*;
 //import javax.servlet.*;
 //import javax.servlet.http.*;
@@ -113,9 +115,11 @@ public class DataBaseConnector {
     public static void main(String[] args){
         DataBaseConnector test = null;
         try {
-            test = new DataBaseConnector("root","trin1TRON");
+            System.out.println("Enter the password:");
+            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+            String password = userInput.readLine();
+            test = new DataBaseConnector("root",password);
         ResultSet rs = null, rm = null;
-            //test.addUser("zornical", "111111", "steste1r12@mama.ru");
             rs = test.getAllUsers();
             System.out.println(test.checkUser("foban", "trin1TRON"));
             test.getUserInformation(32);
