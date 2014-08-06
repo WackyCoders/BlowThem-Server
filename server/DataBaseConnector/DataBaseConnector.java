@@ -55,8 +55,13 @@ public class DataBaseConnector {
         return executeQuery("SELECT username, scores, money, tank FROM users WHERE id_user = " + id_user);
     }
 
-    public ResultSet getUserTanks(int id_user) throws Exception{ //tank, armor, engine, first_weapon, second_weapon
-        return executeQuery("SELECT tank, armor, engine, first_weapon, second_weapon FROM garage WHERE user = "+id_user);
+    public ResultSet getUserTanks(int id_user) throws Exception{ //tank, armor, engine, first_weapon, second_weapon, id_tank
+        return executeQuery("SELECT tank, armor, engine, first_weapon, second_weapon, id_tank FROM garage WHERE user = "+id_user);
+    }
+
+    public ResultSet getUserEquipment(int id_user) throws Exception{ //armor, engine, first_weapon, second_weapon
+        return executeQuery("SELECT armor, engine, first_weapon, second_weapon FROM garage_armor, garage_engine, garage_first_weapon, garage_second_weapon \n" +
+                "where garage_armor.user = garage_engine.user = garage_first_weapon.user = garage_second_weapon.user = "+id_user);
     }
 
     public String getUserName(int id_user) throws DataBaseConnectorException { //return field username
@@ -121,9 +126,9 @@ public class DataBaseConnector {
             test = new DataBaseConnector("root",password);
         ResultSet rs = null, rm = null;
             rs = test.getAllUsers();
-            System.out.println(test.checkUser("foban", "trin1TRON"));
             test.getUserInformation(32);
             test.getUserTanks(32);
+
 
             while(rs.next()){
                 System.out.print("Username: " + rs.getString("username") + "\tscores: " + rs.getString("scores")  + "\tmoney: " + rs.getString("money"));
@@ -132,6 +137,9 @@ public class DataBaseConnector {
                 rm.next();
                 System.out.println(" mail: " + rm.getString("mail"));
             }
+            rs = test.getUserEquipment(32);
+            ResultSetMetaData rmd = rs.getMetaData();
+            System.out.println(rmd.getColumnName(1));
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,17 +1,14 @@
 package server;
 
 import server.DataBaseConnector.*;
+import server.Garage.Garage;
+import server.Garage.Tank;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.sql.ResultSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 /**
@@ -107,10 +104,8 @@ public class ConnectServer {
 
     class UserProcessor implements Runnable{//подкласс
         Socket socket;
-        BufferedReader bufferedReader;
-        BufferedWriter bufferedWriter;
 
-
+        private boolean closed = false;
 
         DataOutputStream outputStream;
         DataInputStream inputStream;
@@ -119,7 +114,8 @@ public class ConnectServer {
         Integer userId = null;
         int scores;
         int money;
-        Queue<Tank> tanks = new LinkedList<Tank>();
+        //Queue<Tank> tanks = new LinkedList<Tank>();
+        Garage garage = new Garage();
 
 
         UserProcessor(Socket socketParam) throws IOException {
@@ -165,25 +161,29 @@ public class ConnectServer {
                     userInfo = dataBaseConnector.getUserTanks(userId);
 
                     while(userInfo.next()){
-                        tanks.add(new Tank(
+                        garage.addTank(
+                                userInfo.getInt("id_tank"),
                                 userInfo.getInt("tank"),
                                 userInfo.getInt("armor"),
                                 userInfo.getInt("engine"),
                                 userInfo.getInt("first_weapon"),
                                 userInfo.getInt("second_weapon")
-                        ));
+                        );
                     }
-                } catch (Exception e) {
 
+                    userInfo = dataBaseConnector.getUserEquipment(userId);
+                    while(userInfo.next()){
+                        garage.addArmor(userInfo.getInt("armor"));
+                        garage.addEngine(userInfo.getInt("engine"));
+                        garage.addFirstWeapon(userInfo.getInt("first_weapon"));
+                        garage.addSecondWeapon(userInfo.getInt("second_weapon"));
+                    }
+
+                } catch (Exception e) {
                     e.printStackTrace();
                     close();
                 }
             }
-        }
-
-
-        private void sendTanks(){
-
         }
 
         private void sendUserInformation(){
@@ -191,7 +191,14 @@ public class ConnectServer {
                 send("$info$");
                 send(money);
                 send(scores);
-
+                send("$garage$");
+                try {
+                    garage.send(outputStream);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    close();
+                }
+                send("$garage_end$");
             }
         }
 
@@ -278,7 +285,9 @@ public class ConnectServer {
             enter();
             getUserInformation();
             sendUserInformation();
-            System.out.println("We enter to the system");
+
+            if(!closed)System.out.println("We enter to the system");
+
             while (!socket.isClosed()) {
                 String line = null;
                 try {
@@ -300,10 +309,10 @@ public class ConnectServer {
 
                 } else if(line.equals("$choose$")){
 
-                }
-                else if(line.equals("$close$")){
+                } else if(line.equals("$close$")){
                     close();
                 }
+
                 /*("$shutdown$".equals(line)) {
                     serverThread.interrupt();
                     try {
@@ -333,14 +342,22 @@ public class ConnectServer {
 
 
         public synchronized void close() {
-            System.out.println("Умираю :(");
-            if(userId != null)gameServer.deleteUser(userId);
+            if(!closed){
+                System.out.println("Умираю :(");
 
-            userProcessorQueue.remove(this);
-            if (!socket.isClosed()) {
-                try {
-                    socket.close();
-                } catch (IOException ignored) {}
+                if(userId != null){
+                    gameServer.deleteUser(userId);
+                    userId = null;
+                }
+
+
+                userProcessorQueue.remove(this);
+                if (!socket.isClosed()) {
+                    try {
+                        socket.close();
+                    } catch (IOException ignored) {}
+                }
+                closed = true;
             }
         }
 

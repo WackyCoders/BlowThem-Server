@@ -1,4 +1,4 @@
-package server;
+package server.Garage;
 
 /**
  * Created by foban on 02.08.14.
