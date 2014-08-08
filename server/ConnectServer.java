@@ -112,6 +112,7 @@ public class ConnectServer {
 
         String username;
         Integer userId = null;
+        int tank;
         int scores;
         int money;
         //Queue<Tank> tanks = new LinkedList<Tank>();
@@ -157,6 +158,7 @@ public class ConnectServer {
                     userInfo.next();
                     scores = userInfo.getInt("scores");
                     money = userInfo.getInt("money");
+                    tank = userInfo.getInt("tank");
 
                     userInfo = dataBaseConnector.getUserTanks(userId);
 
@@ -281,6 +283,22 @@ public class ConnectServer {
                 close();
         }
 
+        private void buy(String type, int id) throws DataBaseConnectorException {
+           if(type != null){
+               int cost = -1;
+               if(type.equals("$tank$")){
+                   cost = dataBaseConnector.getTankCost(id);
+               }
+
+               if(money >= cost && cost != -1){
+
+               }
+
+           }else{
+               close();
+           }
+        }
+
         public void run() {
             enter();
             getUserInformation();
@@ -304,7 +322,17 @@ public class ConnectServer {
                 } else if (line.equals("$start$")){
 
                 } else if(line.equals("$buy$")){
-
+                    try {
+                        buy(
+                                inputStream.readUTF(),
+                                inputStream.readInt()
+                        );
+                    } catch (IOException e) {
+                        close();
+                    } catch (DataBaseConnectorException e) {
+                        e.printStackTrace();
+                        close();
+                    }
                 } else if(line.equals("$set$")){
 
                 } else if(line.equals("$choose$")){
@@ -328,17 +356,6 @@ public class ConnectServer {
                 }*/
             }
         }
-
-
-        /*public synchronized void send(String line) {
-            try {
-                bufferedWriter.write(line); // пишем строку
-                bufferedWriter.write("\n"); // пишем перевод строки
-                bufferedWriter.flush(); // отправляем
-            } catch (IOException e) {
-                close(); //если глюк в момент отправки - закрываем данный сокет.
-            }
-        }*/
 
 
         public synchronized void close() {

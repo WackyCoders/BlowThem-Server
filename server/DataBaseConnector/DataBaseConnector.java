@@ -64,7 +64,32 @@ public class DataBaseConnector {
                 "where garage_armor.user = garage_engine.user = garage_first_weapon.user = garage_second_weapon.user = "+id_user);
     }
 
-    public String getUserName(int id_user) throws DataBaseConnectorException { //return field username
+    public int getTankCost(int id_tank) throws DataBaseConnectorException {
+        int cost;
+        try {
+            ResultSet rs = executeQuery("SELECT cost FROM tanks WHERE id_tank = " + id_tank);
+            rs.next();
+            cost = rs.getInt("cost");
+        } catch (Exception e) {
+            throw new DataBaseConnectorException("Error when try get cost of the tank: " + e.toString());
+        }
+        return cost;
+    }
+
+    public void makePurchase(int id_user, int cost, String type, int id) throws DataBaseConnectorException {
+
+        try {
+            executeUpdate("UPDATE users SET money = money - "+cost+" WHERE id_user = "+ id_user);
+            if(type.equals("$tank$"))
+            executeUpdate("");
+        }
+        catch (Exception e){
+            throw new DataBaseConnectorException("Shopping error ^_^ : " + e.toString());
+        }
+
+    }
+
+    public String getUserName(int id_user) throws DataBaseConnectorException {
         String username;
         try {
             ResultSet rs = executeQuery("SELECT username FROM users WHERE id_user = " + id_user);
