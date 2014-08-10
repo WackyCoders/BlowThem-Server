@@ -193,6 +193,7 @@ public class ConnectServer {
                 send("$info$");
                 send(money);
                 send(scores);
+                send(tank);
                 send("$garage$");
                 try {
                     garage.send(outputStream);
@@ -288,10 +289,21 @@ public class ConnectServer {
                int cost = -1;
                if(type.equals("$tank$")){
                    cost = dataBaseConnector.getTankCost(id);
+               } else if(type.equals("$armor$")){
+                   cost = dataBaseConnector.getArmorCost(id);
+               }else if(type.equals("$engine$")){
+                   cost = dataBaseConnector.getEngineCost(id);
+               }else if(type.equals("$first_weapon$")){
+                   cost = dataBaseConnector.getFirstWeaponCost(id);
+               }else if(type.equals("$second_weapon$")){
+                   cost = dataBaseConnector.getSecondWeaponCost(id);
                }
 
                if(money >= cost && cost != -1){
-
+                    dataBaseConnector.makePurchase(userId, cost, type,id);
+                   money -= cost;
+               }else {
+                   close();
                }
 
            }else{
@@ -331,6 +343,7 @@ public class ConnectServer {
                         close();
                     } catch (DataBaseConnectorException e) {
                         e.printStackTrace();
+                        send("$error$");
                         close();
                     }
                 } else if(line.equals("$set$")){

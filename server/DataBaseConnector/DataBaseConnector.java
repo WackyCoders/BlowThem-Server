@@ -64,24 +64,92 @@ public class DataBaseConnector {
                 "where garage_armor.user = garage_engine.user = garage_first_weapon.user = garage_second_weapon.user = "+id_user);
     }
 
-    public int getTankCost(int id_tank) throws DataBaseConnectorException {
+    private int getCost(String table, String column, int id) throws DataBaseConnectorException {
         int cost;
         try {
-            ResultSet rs = executeQuery("SELECT cost FROM tanks WHERE id_tank = " + id_tank);
+            ResultSet rs = executeQuery("SELECT cost FROM "+table+" WHERE "+column+" = " + id);
             rs.next();
             cost = rs.getInt("cost");
         } catch (Exception e) {
-            throw new DataBaseConnectorException("Error when try get cost of the tank: " + e.toString());
+            throw new DataBaseConnectorException("Error when try get cost: " + e.toString());
         }
         return cost;
+    }
+
+    public int getTankCost(int id_tank) throws DataBaseConnectorException {
+        return getCost("tanks", "id_tank", id_tank);
+    }
+
+    public int getArmorCost(int id_armor) throws DataBaseConnectorException {
+        return getCost("armor", "id_armor", id_armor);
+    }
+
+    public int getEngineCost(int id_engine) throws DataBaseConnectorException {
+        return getCost("engine", "id_engine", id_engine);
+    }
+
+    public int getFirstWeaponCost(int id_weapon) throws DataBaseConnectorException {
+        return getCost("first_weapon", "id_weapon", id_weapon);
+    }
+
+    public int getSecondWeaponCost(int id_weapon) throws DataBaseConnectorException {
+        return getCost("second_weapon", "id_weapon", id_weapon);
+    }
+
+    private void addEquipment(String type, int id_user, int id) throws DataBaseConnectorException {
+        try {
+            executeUpdate("insert into garage_"+type+" ("+type+", user ) values ("+id +", "+ id_user+")");
+        }
+        catch (Exception e){
+            throw new DataBaseConnectorException("Error when adding equipment: " + e.toString());
+        }
+
+    }
+
+    private void addTankToGarage(int id_user, int id_tank) throws DataBaseConnectorException {
+
+        try {
+            ResultSet tankInfo = executeQuery("SELECT first_weapon, second_weapon, armor, engine FROM tanks WHERE id_tank = "+id_tank);
+            tankInfo.next();
+            executeUpdate("insert into garage (user, tank, first_weapon, second_weapon, armor, engine) values (" +
+                            id_user + ", " +
+                            id_tank + ", " +
+                            tankInfo.getInt("first_weapon") + ", " +
+                            tankInfo.getInt("second_weapon") + ", " +
+                            tankInfo.getInt("armor") + ", " +
+                            tankInfo.getInt("engine") + ")"
+            );
+            addEquipment("first_weapon", id_user, tankInfo.getInt("first_weapon"));
+            addEquipment("second_weapon", id_user, tankInfo.getInt("second_weapon"));
+            addEquipment("armor", id_user, tankInfo.getInt("armor"));
+            addEquipment("engine", id_user, tankInfo.getInt("engine"));
+        }
+        catch (Exception e){
+            throw new DataBaseConnectorException("Error when adding a tank: " + e.toString());
+        }
+
     }
 
     public void makePurchase(int id_user, int cost, String type, int id) throws DataBaseConnectorException {
 
         try {
+            if(type == null){
+                throw new DataBaseConnectorException("Shopping error ^_^ (type == null): ");
+            }else if(type.equals("$tank$")){
+                addTankToGarage(id_user, id);
+            }else if(type.equals("$armor$")){
+                addEquipment("armor", id_user, id);
+            }else if(type.equals("$engine$")){
+                addEquipment("engine", id_user, id);
+            }else if(type.equals("$first_weapon$")){
+                addEquipment("first_weapon", id_user, id);
+            }else if(type.equals("$second_weapon$")){
+                addEquipment("second_weapon", id_user, id);
+            } else{
+                throw new DataBaseConnectorException("Shopping error ^_^ (wrong type): ");
+            }
+
             executeUpdate("UPDATE users SET money = money - "+cost+" WHERE id_user = "+ id_user);
-            if(type.equals("$tank$"))
-            executeUpdate("");
         }
         catch (Exception e){
             throw new DataBaseConnectorException("Shopping error ^_^ : " + e.toString());
@@ -150,9 +218,13 @@ public class DataBaseConnector {
             String password = userInput.readLine();
             test = new DataBaseConnector("root",password);
         ResultSet rs = null, rm = null;
+
+
             rs = test.getAllUsers();
             test.getUserInformation(32);
             test.getUserTanks(32);
+            //test.addEquipment("armor", 32, 1);
+
 
 
             while(rs.next()){
@@ -165,6 +237,10 @@ public class DataBaseConnector {
             rs = test.getUserEquipment(32);
             ResultSetMetaData rmd = rs.getMetaData();
             System.out.println(rmd.getColumnName(1));
+            while(rs.next()){
+                System.out.print(rs.getInt("armor"));
+
+            }
 
         } catch (Exception e) {
             e.printStackTrace();

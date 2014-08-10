@@ -136,3 +136,9 @@ CREATE TABLE `garage_second_weapon` (
   KEY `user` (`user`),
   CONSTRAINT `garage_second_weapon_ibfk_2` FOREIGN KEY (`user`) REFERENCES `users` (`id_user`) ON DELETE Cascade
 );
+
+alter table garage add unique (user, tank);
+alter table garage_armor add unique (user, armor);
+alter table garage_engine add unique (user, engine);
+alter table garage_first_weapon add unique (user, first_weapon);
+alter table garage_second_weapon add unique (user, second_weapon);
