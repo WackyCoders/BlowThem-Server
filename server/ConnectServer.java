@@ -1,6 +1,5 @@
 package server;
 
-import server.DataBaseConnector.*;
 import server.Garage.Garage;
 import server.Garage.Tank;
 
@@ -10,6 +9,8 @@ import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
+
+import DataBaseConnector.*;
 
 /**
  * Created by foban on 27.07.14.
@@ -95,7 +96,7 @@ public class ConnectServer {
             System.out.println("Enter the password:");
             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
             String password = userInput.readLine();
-            new ConnectServer(45000, password).run();
+            new ConnectServer(8080, password).run();
         } catch (Exception e) {
             log.warning("Start server failed: " + e.toString());
         }
@@ -124,7 +125,6 @@ public class ConnectServer {
 
             outputStream = new DataOutputStream(socket.getOutputStream());
             inputStream = new DataInputStream(socket.getInputStream());
-
 
 
             //bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
@@ -231,6 +231,14 @@ public class ConnectServer {
             login(password);
 
         }
+        
+        private void motion(){
+        	try {
+				System.out.println("X : " + inputStream.readUTF() + " Y : " + inputStream.readUTF());
+			} catch (IOException e) {
+				close();
+			}
+        }
 
         private void registration(String password, String mail){
 
@@ -269,16 +277,17 @@ public class ConnectServer {
             String status = null;
             try {
                 status = inputStream.readUTF();
-
                 //status = bufferedReader.readLine();
             } catch (IOException e) {
                 close();
             }
-            System.out.println(status);
+            //System.out.println("!!!!STATUSS!!! ---> " + status);
             if(status.equals("$login$")){
                 login();
             }else if (status.equals("$registration$")){
                 registration();
+            }else if (status.equals("$motion$")){
+            	motion();
             }
             else
                 close();

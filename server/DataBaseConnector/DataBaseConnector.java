@@ -216,7 +216,7 @@ public class DataBaseConnector {
             System.out.println("Enter the password:");
             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
             String password = userInput.readLine();
-            test = new DataBaseConnector("root",password);
+            test = new DataBaseConnector("root", password);
         ResultSet rs = null, rm = null;
 
 
