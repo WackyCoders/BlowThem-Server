@@ -5,6 +5,7 @@ package server.DataBaseConnector; /**
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.*;
+import server.Garage.Purchase;
 //import javax.servlet.*;
 //import javax.servlet.http.*;
 
@@ -36,16 +37,23 @@ public class DataBaseConnector {
         return m;
     }
 
+    private int getSomeInt(String sql, String column, String exception) throws DataBaseConnectorException {
+        int someInt;
+        try {
+            ResultSet rs = executeQuery(sql);
+            rs.next();
+            someInt = rs.getInt(column);
+        } catch (Exception e) {
+            throw new DataBaseConnectorException(exception + e.toString());
+        }
+        return someInt;
+    }
 
 
-    /*public ResultSet getAllUsersPrivate() throws Exception {
-        return executeQuery("SELECT * FROM users");
-    }*/
 
     public ResultSet getAllUsers() throws Exception {  //return fields id_user, username, scores, money
         return executeQuery("SELECT id_user, username, scores, money FROM users");
     }
-
 
     public ResultSet getUserMail(int id_user) throws Exception { //return field mail
         return executeQuery("SELECT mail FROM users WHERE id_user = " + id_user);
@@ -59,21 +67,47 @@ public class DataBaseConnector {
         return executeQuery("SELECT tank, armor, engine, first_weapon, second_weapon, id_tank FROM garage WHERE user = "+id_user);
     }
 
-    public ResultSet getUserEquipment(int id_user) throws Exception{ //armor, engine, first_weapon, second_weapon
-        return executeQuery("SELECT armor, engine, first_weapon, second_weapon FROM garage_armor, garage_engine, garage_first_weapon, garage_second_weapon \n" +
-                "where garage_armor.user = garage_engine.user = garage_first_weapon.user = garage_second_weapon.user = "+id_user);
+
+
+    public ResultSet getUserArmor(int id_user) throws Exception{ //armor
+        return executeQuery("SELECT armor FROM garage_armor WHERE user = "+id_user);
+    }
+    public ResultSet getUserEngine(int id_user) throws Exception{ //engine
+        return executeQuery("SELECT engine FROM garage_engine WHERE user = "+id_user);
+    }
+    public ResultSet getUserFirstWeapon(int id_user) throws Exception{ //first_weapon
+        return executeQuery("SELECT first_weapon FROM garage_first_weapon WHERE user = "+id_user);
+    }
+    public ResultSet getUserSecondWeapon(int id_user) throws Exception{ //second_weapon
+        return executeQuery("SELECT second_weapon FROM garage_second_weapon WHERE user = "+id_user);
     }
 
-    private int getCost(String table, String column, int id) throws DataBaseConnectorException {
-        int cost;
+
+    private void setEquipment(String column, int id_tank, int id) throws DataBaseConnectorException {
         try {
-            ResultSet rs = executeQuery("SELECT cost FROM "+table+" WHERE "+column+" = " + id);
-            rs.next();
-            cost = rs.getInt("cost");
-        } catch (Exception e) {
-            throw new DataBaseConnectorException("Error when try get cost: " + e.toString());
+            executeUpdate("UPDATE garage SET "+column+" = "+id+" WHERE id_tank = "+id_tank);
         }
-        return cost;
+        catch (Exception e){
+            throw new DataBaseConnectorException("Error when setting equipment: " + e.toString());
+        }
+    }
+
+    public void setTankArmor(int id_tank, int id_armor) throws DataBaseConnectorException {
+        setEquipment("armor", id_tank, id_armor);
+    }
+    public void setTankEngine (int id_tank, int id) throws DataBaseConnectorException {
+        setEquipment("engine", id_tank, id);
+    }
+    public void setTankFirstWeapon(int id_tank, int id) throws DataBaseConnectorException {
+        setEquipment("first_weapon", id_tank, id);
+    }
+    public void setTankSecondWeapon(int id_tank, int id) throws DataBaseConnectorException {
+        setEquipment("second_weapon", id_tank, id);
+    }
+
+
+    private int getCost(String table, String column, int id) throws DataBaseConnectorException {
+        return getSomeInt("SELECT cost FROM "+table+" WHERE "+column+" = " + id,"cost", "Error when try get cost: ");
     }
 
     public int getTankCost(int id_tank) throws DataBaseConnectorException {
@@ -106,8 +140,12 @@ public class DataBaseConnector {
 
     }
 
-    private void addTankToGarage(int id_user, int id_tank) throws DataBaseConnectorException {
+    private int getUserTankID(int id_user, int id_tank) throws DataBaseConnectorException {
+        return getSomeInt("SELECT id_tank FROM garage WHERE user = "+id_user+" AND tank = " + id_tank, "id_tank","Error when try get tank id: " );
+    }
 
+    private Purchase addTankToGarage(int id_user, int id_tank) throws DataBaseConnectorException {
+        Purchase purchase = null;
         try {
             ResultSet tankInfo = executeQuery("SELECT first_weapon, second_weapon, armor, engine FROM tanks WHERE id_tank = "+id_tank);
             tankInfo.next();
@@ -123,28 +161,39 @@ public class DataBaseConnector {
             addEquipment("second_weapon", id_user, tankInfo.getInt("second_weapon"));
             addEquipment("armor", id_user, tankInfo.getInt("armor"));
             addEquipment("engine", id_user, tankInfo.getInt("engine"));
+            purchase = new Purchase();
+            purchase.setArmor(tankInfo.getInt("armor"));
+            purchase.setEngine(tankInfo.getInt("engine"));
+            purchase.setSecondWeapon(tankInfo.getInt("second_weapon"));
+            purchase.setFirstWeapon(tankInfo.getInt("first_weapon"));
+            purchase.setTank(id_tank);
+            purchase.setID(getUserTankID(id_user,id_tank));
         }
         catch (Exception e){
             throw new DataBaseConnectorException("Error when adding a tank: " + e.toString());
         }
-
+        return purchase;
     }
 
-    public void makePurchase(int id_user, int cost, String type, int id) throws DataBaseConnectorException {
-
+    public Purchase makePurchase(int id_user, int cost, String type, int id) throws DataBaseConnectorException {
+        Purchase purchase = new Purchase();
         try {
             if(type == null){
                 throw new DataBaseConnectorException("Shopping error ^_^ (type == null): ");
             }else if(type.equals("$tank$")){
-                addTankToGarage(id_user, id);
+                purchase = addTankToGarage(id_user, id);
             }else if(type.equals("$armor$")){
                 addEquipment("armor", id_user, id);
+                purchase.setArmor(id);
             }else if(type.equals("$engine$")){
                 addEquipment("engine", id_user, id);
+                purchase.setEngine(id);
             }else if(type.equals("$first_weapon$")){
                 addEquipment("first_weapon", id_user, id);
+                purchase.setFirstWeapon(id);
             }else if(type.equals("$second_weapon$")){
                 addEquipment("second_weapon", id_user, id);
+                purchase.setSecondWeapon(id);
             } else{
                 throw new DataBaseConnectorException("Shopping error ^_^ (wrong type): ");
             }
@@ -154,8 +203,30 @@ public class DataBaseConnector {
         catch (Exception e){
             throw new DataBaseConnectorException("Shopping error ^_^ : " + e.toString());
         }
-
+        return purchase;
     }
+
+
+
+
+    private int getTankIDForEquipment(String table, String column, int id) throws DataBaseConnectorException {
+        return getSomeInt("SELECT tank FROM "+table+" WHERE "+column+" = "+id, "tank", "Error when we try get tank for equipment: ");
+    }
+
+
+    public int getTankIDForArmor(int id) throws DataBaseConnectorException {
+        return getTankIDForEquipment("armor", "id_armor", id);
+    }
+    public int getTankIDForEngine(int id) throws DataBaseConnectorException {
+        return getTankIDForEquipment("engine", "id_engine", id);
+    }
+    public int getTankIDForFirstWeapon (int id) throws DataBaseConnectorException {
+        return getTankIDForEquipment("first_weapon", "id_weapon", id);
+    }
+    public int getTankIDForSecondWeapon(int id) throws DataBaseConnectorException {
+        return getTankIDForEquipment("second_weapon", "id_weapon", id);
+    }
+
 
     public String getUserName(int id_user) throws DataBaseConnectorException {
         String username;
@@ -192,12 +263,8 @@ public class DataBaseConnector {
 
     }
 
-    public Integer checkUser(String username, String password) throws Exception{
-        Integer id_user = null;
-        ResultSet rs = executeQuery("SELECT id_user FROM users WHERE username = \"" + username + "\" AND password = \"" + password + "\";");
-        rs.next();
-        id_user = rs.getInt("id_user");
-        return id_user;
+    public int checkUser(String username, String password) throws DataBaseConnectorException {
+        return getSomeInt("SELECT id_user FROM users WHERE username = \"" + username + "\" AND password = \"" + password + "\";", "id_user", "");
     }
 
     public DataBaseConnector(String login, String password) throws ClassNotFoundException, DataBaseConnectorException {
@@ -233,13 +300,6 @@ public class DataBaseConnector {
                 rm = test.getUserMail(rs.getInt("id_user"));
                 rm.next();
                 System.out.println(" mail: " + rm.getString("mail"));
-            }
-            rs = test.getUserEquipment(32);
-            ResultSetMetaData rmd = rs.getMetaData();
-            System.out.println(rmd.getColumnName(1));
-            while(rs.next()){
-                System.out.print(rs.getInt("armor"));
-
             }
 
         } catch (Exception e) {

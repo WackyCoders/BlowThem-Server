@@ -1,7 +1,6 @@
 package server;
 
-import server.Garage.Garage;
-import server.Garage.Tank;
+import server.Garage.*;
 
 import java.io.*;
 import java.net.*;
@@ -10,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
-import DataBaseConnector.*;
+import server.DataBaseConnector.*;
 
 /**
  * Created by foban on 27.07.14.
@@ -103,7 +102,8 @@ public class ConnectServer {
     }
 
 
-    class UserProcessor implements Runnable{//подкласс
+    /*Подклас который поддерживает связь с клиентом и обрабатывает его запросы*/
+    class UserProcessor implements Runnable{
         Socket socket;
 
         private boolean closed = false;
@@ -151,6 +151,7 @@ public class ConnectServer {
             }
         }
 
+        /*Получение информации о пользователе из базы данных*/
         private void getUserInformation(){
             if(userId!=null){
                 try {
@@ -173,11 +174,20 @@ public class ConnectServer {
                         );
                     }
 
-                    userInfo = dataBaseConnector.getUserEquipment(userId);
+                    userInfo = dataBaseConnector.getUserArmor(userId);
                     while(userInfo.next()){
                         garage.addArmor(userInfo.getInt("armor"));
+                    }
+                    userInfo = dataBaseConnector.getUserEngine(userId);
+                    while(userInfo.next()){
                         garage.addEngine(userInfo.getInt("engine"));
+                    }
+                    userInfo = dataBaseConnector.getUserFirstWeapon(userId);
+                    while(userInfo.next()){
                         garage.addFirstWeapon(userInfo.getInt("first_weapon"));
+                    }
+                    userInfo = dataBaseConnector.getUserSecondWeapon(userId);
+                    while(userInfo.next()){
                         garage.addSecondWeapon(userInfo.getInt("second_weapon"));
                     }
 
@@ -188,6 +198,8 @@ public class ConnectServer {
             }
         }
 
+
+        /*Отправка данных пользователя клиенту*/
         private void sendUserInformation(){
             if(userId != null){
                 send("$info$");
@@ -205,6 +217,7 @@ public class ConnectServer {
             }
         }
 
+        /*Вход в систему при помощи пароля и никнэйма(глобальная переменная класса)*/
         private void login(String password){
             try {
                 userId = dataBaseConnector.checkUser(username, password);
@@ -219,6 +232,7 @@ public class ConnectServer {
             }
         }
 
+        /*Обертка над входом в систему*/
         private void login(){
             String password = null;
             try {
@@ -240,6 +254,7 @@ public class ConnectServer {
 			}
         }
 
+        /*Регистрация с последующим входом в систему при помощи пароля, почты и никнэйма(глобальная переменная класса)*/
         private void registration(String password, String mail){
 
             try {
@@ -255,6 +270,7 @@ public class ConnectServer {
             }
         }
 
+        /*Обертка над регистрацией*/
         private void registration(){
             String password = null, mail = null;
             try {
@@ -273,6 +289,7 @@ public class ConnectServer {
 
         }
 
+        /*Ф-ция предоставляющая различные варианты входа в систему*/
         private void enter(){
             String status = null;
             try {
@@ -293,6 +310,7 @@ public class ConnectServer {
                 close();
         }
 
+        /*Покупка каких либо товаров*/
         private void buy(String type, int id) throws DataBaseConnectorException {
            if(type != null){
                int cost = -1;
@@ -309,7 +327,7 @@ public class ConnectServer {
                }
 
                if(money >= cost && cost != -1){
-                    dataBaseConnector.makePurchase(userId, cost, type,id);
+                   garage.addPurchase(dataBaseConnector.makePurchase(userId, cost, type,id));
                    money -= cost;
                }else {
                    close();
@@ -318,6 +336,43 @@ public class ConnectServer {
            }else{
                close();
            }
+        }
+
+        /*Смена оружия, брони или двигателя танка пользователя*/
+        private void set(String type, int id_tank, int id) throws Exception{
+            int tankTypeID = garage.getTankID(id_tank);
+            if(type == null){
+                close();
+            }else if(type.equals("$armor$")){
+                if(tankTypeID == dataBaseConnector.getTankIDForArmor(id)){
+                    garage.setArmor(id_tank, id);
+                    dataBaseConnector.setTankArmor(id_tank,id);
+                }
+                else
+                    throw new Exception();
+            }else if(type.equals("$engine$")){
+                if(tankTypeID == dataBaseConnector.getTankIDForEngine(id)){
+                    garage.setEngine(id_tank, id);
+                    dataBaseConnector.setTankEngine(id_tank, id);
+                }
+                else
+                    throw new Exception();
+            }else if(type.equals("$first_weapon$")){
+                if(tankTypeID == dataBaseConnector.getTankIDForFirstWeapon(id)){
+                    garage.setFirstWeapon(id_tank, id);
+                    dataBaseConnector.setTankFirstWeapon(id_tank, id);
+                }
+                else
+                    throw new Exception();
+            }else if(type.equals("$second_weapon$")){
+                if(tankTypeID == dataBaseConnector.getTankIDForSecondWeapon(id)){
+                    garage.setSecondWeapon(id_tank, id);
+                    dataBaseConnector.setTankSecondWeapon(id_tank, id);
+                }
+                else
+                    throw new Exception();
+            }else
+                close();
         }
 
         public void run() {
@@ -338,6 +393,7 @@ public class ConnectServer {
                 }
 
 
+                //Дальше идут различные команды которые может отдать пользователь при входе в систему
                 if (line == null) {
                     close();
                 } else if (line.equals("$start$")){
@@ -348,6 +404,7 @@ public class ConnectServer {
                                 inputStream.readUTF(),
                                 inputStream.readInt()
                         );
+                        send("buy_success");
                     } catch (IOException e) {
                         close();
                     } catch (DataBaseConnectorException e) {
@@ -356,30 +413,27 @@ public class ConnectServer {
                         close();
                     }
                 } else if(line.equals("$set$")){
-
+                    try {
+                        set(
+                                inputStream.readUTF(),
+                                inputStream.readInt(),
+                                inputStream.readInt()
+                        );
+                        send("set_success");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        close();
+                    }
                 } else if(line.equals("$choose$")){
 
                 } else if(line.equals("$close$")){
                     close();
                 }
-
-                /*("$shutdown$".equals(line)) {
-                    serverThread.interrupt();
-                    try {
-                        new Socket("localhost", port);
-                        } catch (IOException ignored) {
-                    } finally {
-                        shutdownServer();
-                    }
-                } else {
-                    for (UserProcessor sp: userProcessorQueue) {
-                        if(sp != this)sp.send(username +": " + line);
-                    }
-                }*/
             }
         }
 
 
+        /*Окончание работы с пользователем*/
         public synchronized void close() {
             if(!closed){
                 System.out.println("Умираю :(");
