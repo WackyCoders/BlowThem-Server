@@ -5,7 +5,6 @@ import server.Garage.*;
 import java.io.*;
 import java.net.*;
 import java.sql.ResultSet;
-import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
@@ -113,7 +112,7 @@ public class ConnectServer {
 
         String username;
         Integer userId = null;
-        int tank;
+        int currentTank;
         int scores;
         int money;
         //Queue<Tank> tanks = new LinkedList<Tank>();
@@ -159,7 +158,7 @@ public class ConnectServer {
                     userInfo.next();
                     scores = userInfo.getInt("scores");
                     money = userInfo.getInt("money");
-                    tank = userInfo.getInt("tank");
+                    currentTank = userInfo.getInt("tank");
 
                     userInfo = dataBaseConnector.getUserTanks(userId);
 
@@ -205,7 +204,7 @@ public class ConnectServer {
                 send("$info$");
                 send(money);
                 send(scores);
-                send(tank);
+                send(currentTank);
                 send("$garage$");
                 try {
                     garage.send(outputStream);
@@ -375,6 +374,16 @@ public class ConnectServer {
                 close();
         }
 
+        /*Выбор основного танка*/
+        private void choose(int id_tank) throws Exception {
+            if(garage.containsTank(id_tank)){
+                currentTank = id_tank;
+                dataBaseConnector.setUserTank(userId, id_tank);
+            }
+            else
+                throw new Exception("We don't have such tank");
+        }
+
         public void run() {
             enter();
             getUserInformation();
@@ -396,7 +405,7 @@ public class ConnectServer {
                 //Дальше идут различные команды которые может отдать пользователь при входе в систему
                 if (line == null) {
                     close();
-                } else if (line.equals("$start$")){
+                } else if (line.equals("$start$")){//это начало битвы
 
                 } else if(line.equals("$buy$")){
                     try {
@@ -412,7 +421,7 @@ public class ConnectServer {
                         send("$error$");
                         close();
                     }
-                } else if(line.equals("$set$")){
+                } else if(line.equals("$set$")){//это смена оружия брони и т.д. у танка
                     try {
                         set(
                                 inputStream.readUTF(),
@@ -424,7 +433,14 @@ public class ConnectServer {
                         e.printStackTrace();
                         close();
                     }
-                } else if(line.equals("$choose$")){
+                } else if(line.equals("$choose$")){//выбор основного танка
+                    try {
+                        choose(inputStream.readInt());
+                        send("choose_success");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        close();
+                    }
 
                 } else if(line.equals("$close$")){
                     close();

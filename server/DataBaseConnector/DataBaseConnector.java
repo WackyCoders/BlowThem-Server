@@ -227,6 +227,34 @@ public class DataBaseConnector {
         return getTankIDForEquipment("second_weapon", "id_weapon", id);
     }
 
+    public void setUserTank(int id_user, int id_tank) throws DataBaseConnectorException {
+        try {
+            executeUpdate("UPDATE users SET tank = "+id_tank+" WHERE id_user = "+id_user);
+        } catch (Exception e) {
+            throw new DataBaseConnectorException("Error in changing tank in table 'users' " + e.toString());
+        }
+    }
+
+    public void addScores(int id_user, int scores) throws DataBaseConnectorException {
+        try {
+            executeUpdate("UPDATE users SET scores = scores + " +scores+ " WHERE id_user = "+id_user);
+        } catch (Exception e) {
+            throw new DataBaseConnectorException("Error in changing scores in table 'users' " + e.toString());
+        }
+    }
+
+    public void addMoney(int id_user, int money) throws DataBaseConnectorException {
+        try {
+            if(money > 0){
+                executeUpdate("UPDATE users SET money = money + " +money+ " WHERE id_user = "+id_user);
+            }
+            else
+                throw new Exception("Wrong money add");
+        } catch (Exception e) {
+            throw new DataBaseConnectorException("Error in changing scores in table 'users' " + e.toString());
+        }
+    }
+
 
     public String getUserName(int id_user) throws DataBaseConnectorException {
         String username;

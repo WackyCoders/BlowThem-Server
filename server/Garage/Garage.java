@@ -169,4 +169,8 @@ public class Garage {
         }else
             throw new Exception("Some one try hack our server!! Let kill this stupid person!!!");
     }
+
+    public boolean containsTank(int id){
+        return tanks.containsKey(id);
+    }
 }
