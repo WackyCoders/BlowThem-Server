@@ -141,6 +141,10 @@ public class Garage {
         return tanks.get(id).id_tank;
     }
 
+    public Tank getTank(int id){
+        return tanks.get(id);
+    }
+
     public void setArmor(int id_tank, int id_armor) throws Exception {
         Tank tank = tanks.get(id_tank);
         if(armorsID.contains(id_armor) && tank != null){

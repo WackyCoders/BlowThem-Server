@@ -36,7 +36,7 @@ public class ConnectServer {
 
         log.severe("Setup game server...");
         dataBaseConnector = new DataBaseConnector("root", password);
-        gameServer = new GameServer(8);
+        gameServer = new GameServer(2);
     }
 
     void run() {
@@ -117,6 +117,7 @@ public class ConnectServer {
         int money;
         //Queue<Tank> tanks = new LinkedList<Tank>();
         Garage garage = new Garage();
+        Battle currentBattle = null;
 
 
         UserProcessor(Socket socketParam) throws IOException {
@@ -130,7 +131,7 @@ public class ConnectServer {
             //bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8") );
         }
 
-        private synchronized void send(String text){
+        synchronized void send(String text){
             try {
                 outputStream.writeUTF(text);
                 outputStream.flush();
@@ -140,13 +141,31 @@ public class ConnectServer {
             }
         }
 
-        private synchronized void send(int num){
+        synchronized void send(int num){
             try {
                 outputStream.writeInt(num);
                 outputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
                 close();
+            }
+        }
+
+        synchronized int readInt() throws IOException {
+            try {
+                return inputStream.readInt();
+            } catch (IOException e) {
+                close();
+                throw e;
+            }
+        }
+
+        synchronized String readUTF() throws IOException {
+            try {
+                return inputStream.readUTF();
+            } catch (IOException e) {
+                close();
+                throw e;
             }
         }
 
@@ -215,6 +234,7 @@ public class ConnectServer {
                 send("$garage_end$");
             }
         }
+
 
         /*Вход в систему при помощи пароля и никнэйма(глобальная переменная класса)*/
         private void login(String password){
@@ -384,6 +404,10 @@ public class ConnectServer {
                 throw new Exception("We don't have such tank");
         }
 
+        private void battle(){
+
+        }
+
         public void run() {
             enter();
             getUserInformation();
@@ -406,8 +430,18 @@ public class ConnectServer {
                 if (line == null) {
                     close();
                 } else if (line.equals("$start$")){//это начало битвы
+                    try {
+                        currentBattle = gameServer.addUserIntoBattle(userId);
+                        boolean end =false;
+                        while(!end && !closed){
 
-                } else if(line.equals("$buy$")){
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        close();
+                    }
+
+                } else if(line.equals("$buy$")){ //это покупка танка, брони и т.д.
                     try {
                         buy(
                                 inputStream.readUTF(),
@@ -444,6 +478,7 @@ public class ConnectServer {
 
                 } else if(line.equals("$close$")){
                     close();
+                    return;
                 }
             }
         }
@@ -455,7 +490,7 @@ public class ConnectServer {
                 System.out.println("Умираю :(");
 
                 if(userId != null){
-                    gameServer.deleteUser(userId);
+                    gameServer.deleteUser(userId, currentBattle);
                     userId = null;
                 }
 
