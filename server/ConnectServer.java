@@ -244,7 +244,7 @@ public class ConnectServer {
                 send("$login_success$");
             }
             catch (Exception e) {
-                e.printStackTrace();
+                //e.printStackTrace();
                 userId = null;
                 send("$login_failed$");
                 enter();
@@ -434,7 +434,10 @@ public class ConnectServer {
                         currentBattle = gameServer.addUserIntoBattle(userId);
                         boolean end =false;
                         while(!end && !closed){
-
+                            //все что в цикле сугубо для того чтоб комп не вис)
+                            line = inputStream.readUTF();
+                            if(line.equals("$close$"))
+                                end = true;
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
