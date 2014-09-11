@@ -119,6 +119,10 @@ public class ConnectServer {
         Garage garage = new Garage();
         Battle currentBattle = null;
 
+        protected boolean fired = false, lost = false;
+        protected Float X, Y, bitmapAngle, targetX, targetY;
+        protected Float xFire, yFire;
+
 
         UserProcessor(Socket socketParam) throws IOException {
             socket = socketParam;
@@ -144,6 +148,16 @@ public class ConnectServer {
         synchronized void send(int num){
             try {
                 outputStream.writeInt(num);
+                outputStream.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+                close();
+            }
+        }
+
+        synchronized void send(float num){
+            try {
+                outputStream.writeFloat(num);
                 outputStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -404,8 +418,33 @@ public class ConnectServer {
                 throw new Exception("We don't have such tank");
         }
 
-        private void battle(){
+        private void battle() throws IOException {
 
+            boolean end =false;
+            String line = null;
+            while(!end && !closed){
+                //все что в цикле сугубо для того чтоб комп не вис)
+                line = inputStream.readUTF();
+
+                if(line.equals("$lost$")){
+                    this.lost = true;
+
+                } else if (line.equals("m")){
+                    this.X = inputStream.readFloat();
+                    this.Y = inputStream.readFloat();
+                    this.bitmapAngle = inputStream.readFloat();
+                    this.targetX = inputStream.readFloat();
+                    this.targetY = inputStream.readFloat();
+
+                } else if (line.equals("$fire$")){
+                    fired = true;
+                    this.xFire = inputStream.readFloat();
+                    this.yFire = inputStream.readFloat();
+                }else if(line.equals("$stop$")){
+                    end =true;
+                }else
+                    close();
+            }
         }
 
         public void run() {
@@ -432,13 +471,7 @@ public class ConnectServer {
                 } else if (line.equals("$start$")){//это начало битвы
                     try {
                         currentBattle = gameServer.addUserIntoBattle(userId);
-                        boolean end =false;
-                        while(!end && !closed){
-                            //все что в цикле сугубо для того чтоб комп не вис)
-                            line = inputStream.readUTF();
-                            if(line.equals("$close$"))
-                                end = true;
-                        }
+                        battle();
                     } catch (Exception e) {
                         e.printStackTrace();
                         close();
